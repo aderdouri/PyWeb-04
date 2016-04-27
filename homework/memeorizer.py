@@ -25,7 +25,8 @@ new 'Bottom Text' and observe the network requests being made, and note
 the imageID for the Ancient Aliens meme.
 
 TODO #1:
-The imageID for the Ancient Aliens meme is:
+The imageID for the Ancient Aliens meme is: 627067
+The imageID for the Buzz/Woody X, X Everywhere meme is: 8619102  (https://cdn.meme.am/Instance/Preview?imageID=8619102)
 
 You will also need a way to identify headlines on the CNN page using
 BeautifulSoup. On the 'Unnecessary Knowledge Page', our fact was
@@ -98,13 +99,14 @@ To submit your homework:
 
 """
 
+
 from bs4 import BeautifulSoup
 import requests
 
-def meme_it(fact):
+def meme_it(fact, imageID):
     url = 'http://cdn.meme.am/Instance/Preview'
     params = {
-        'imageID': 2097248,
+        'imageID': imageID,
         'text1': fact
     }
 
@@ -112,29 +114,50 @@ def meme_it(fact):
 
     return response.content
 
-
-def parse_fact(body):
+def parse_fact(body, attributeName, attributeValue):
     parsed = BeautifulSoup(body, 'html5lib')
-    fact = parsed.find('div', id='content')
+
+    if attributeValue is 'cd__headline':
+        fact = parsed.find("h3", class_='cd__headline')
+    else:
+        fact = parsed.find('div', id='content')
+
     return fact.text.strip()
 
-def get_fact():
-    response = requests.get('http://unkno.com')
-    return parse_fact(response.text)
+def get_fact(url, attributeName, attributeValue):
+    response = requests.get(url)
+    return parse_fact(response.text, attributeName, attributeValue)
 
 def process(path):
     args = path.strip("/").split("/")
 
-    fact = get_fact()
+    """
+    we start with a specified fact url and an aliens imageID
+    """
 
-    meme = meme_it(fact)
+    url = 'http://unkno.com'
+    imageID = 627067
+    attributeName = 'id'
+    attributeValue = 'content'
 
+    if args[0] == 'news':
+        url = 'http://www.cnn.com'
+        attributeName = 'h3'
+        attributeValue = 'cd__headline'
+
+    if args[1] == 'buzz':
+        imageID = 8619102
+    
+    fact = get_fact(url, attributeName, attributeValue)
+    meme = meme_it(fact, imageID)
+    
     return meme
 
 def application(environ, start_response):
     headers = [('Content-type', 'image/jpeg')]
     try:
         path = environ.get('PATH_INFO', None)
+
         if path is None:
             raise NameError
 
@@ -155,3 +178,4 @@ if __name__ == '__main__':
     from wsgiref.simple_server import make_server
     srv = make_server('localhost', 8080, application)
     srv.serve_forever()
+
